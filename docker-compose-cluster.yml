@@ -1,0 +1,45 @@
+version: '3'
+
+# based on this: https://github.com/wurstmeister/kafka-docker
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181"
+
+  kafka_producer_app: # the producer container
+    image: openjdk
+    ports:
+      - "8000:8000" # expose the debugger port to localhost
+    depends_on:
+     - kafka
+    command: java -agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=y -Dbootstrap.servers=kafka:9092 -cp /myapp/out/production/TestKafka:/myapp/lib/* ro.alexandrugris.BasicKafkaProducer # wait for debugger in suspend mode
+    volumes:
+      - C:\Users\alexa\IdeaProjects\TestKafka:/myapp # map the project to the container
+
+  kafka_consumer_app: # the consumer container
+    image: openjdk
+    depends_on:
+       - kafka
+    ports:
+        - "8001:8001" # expose the debugger port to localhost
+    command: java -agentlib:jdwp=transport=dt_socket,server=y,address=8001,suspend=y -Dbootstrap.servers=kafka:9092 -cp /myapp/out/production/TestKafka:/myapp/lib/* ro.alexandrugris.BasicKafkaConsumer # wait for debugger in suspend mode
+    volumes:
+        - C:\Users\alexa\IdeaProjects\TestKafka:/myapp # map the project to the container
+
+  kafka: # for scale
+    image: wurstmeister/kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092"
+
+    environment:
+      HOSTNAME_COMMAND: "route -n | awk '/UG[ \t]/{print $$2}'"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # create a topic
+      KAFKA_CREATE_TOPICS: "alexandrugris.my_topic:5:2:compact" # 5 partitions, 2 replicas
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

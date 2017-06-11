@@ -1,0 +1,26 @@
+version: '3'
+
+# based on this: https://github.com/wurstmeister/kafka-docker
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka: # for scale
+    image: wurstmeister/kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092" # export port. We will connect to localhost
+
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
+      HOSTNAME_COMMAND: "route -n | awk '/UG[ \t]/{print $$2}'"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # create a topic
+      KAFKA_CREATE_TOPICS: "alexandrugris.my_topic:5:1:compact" # 5 partitions, 1 replica
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
